@@ -1,36 +1,28 @@
 # About
 
-This is a [Vagrant](https://www.vagrantup.com/) Environment for setting up
-the [OVMF UEFI EDK2](https://github.com/tianocore/edk2) environment to play
-with [UEFI Secure Boot](https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface#SECURE-BOOT) using [sbctl (Secure Boot key manager)](https://github.com/Foxboron/sbctl).
+This is a [Vagrant](https://www.vagrantup.com/) environment for setting up the [OVMF UEFI EDK2](https://github.com/tianocore/edk2) environment to play with [UEFI Secure Boot](https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface#SECURE-BOOT) using [sbctl (Secure Boot key manager)](https://github.com/Foxboron/sbctl).
 
-## Usage (in Ubuntu 22.04)
+## Usage
 
-Install the [base Ubuntu 22.04 UEFI box](https://github.com/rgl/ubuntu-vagrant).
+Install the [base box](https://github.com/meese-enterprises/ubuntu-vagrant).
 
 Start the environment:
 
-```bash
-# NB in my machine this takes ~30m to complete.
+```shell
 time vagrant up --provider=libvirt --no-destroy-on-error --no-tty
-```
-
-Start ovmf/linux/u-boot in a test vm:
-
-```bash
 cd tmp
-./run.sh
+bash ./run.sh
 ```
 
 Verify that the platform is in Setup Mode:
 
-```bash
+```shell
 sbctl status
 ```
 
 It must output:
 
-```plain
+```shell
 Installed:    ✗ sbctl is not installed
 Setup Mode:   ✗ Enabled
 Secure Boot:  ✗ Disabled
@@ -39,22 +31,22 @@ Vendor Keys:  none
 
 Create our own Platform Key (PK), Key Exchange Key (KEK), and Code Signing CAs:
 
-```bash
+```shell
 sbctl create-keys
 ```
 
 It should something alike:
 
-```bash
+```shell
 Created Owner UUID 5c839e31-20eb-42a6-906b-824ab404e0dd
-Creating secure boot keys...✓ 
+Creating secure boot keys...✓
 Secure boot keys created!
 ```
 
-In more detail, this created all these files:
+In more detail, all of these files should have been created:
 
-```bash
-# find -type f /usr/share/secureboot/keys
+```shell
+$ find -type f /usr/share/secureboot/keys
 /usr/share/secureboot/keys/KEK/KEK.key
 /usr/share/secureboot/keys/KEK/KEK.pem
 /usr/share/secureboot/keys/PK/PK.key
@@ -65,29 +57,29 @@ In more detail, this created all these files:
 
 Enroll the keys with the firmware:
 
-```bash
+```shell
 # NB this should be equivalent of using sbkeysync to write the EFI variables as:
-#       sbkeysync --pk --verbose --keystore /usr/share/secureboot/keys
+  # sbkeysync --pk --verbose --keystore /usr/share/secureboot/keys
 # see https://github.com/Foxboron/sbctl/blob/fda4f2c1efd801cd04fb52923afcdb34baa42369/keys.go#L114-L115
 sbctl enroll-keys --yes-this-might-brick-my-machine
 ```
 
-It should display something alike:
+It should display something like:
 
-```plain
-Enrolling keys to EFI variables...✓ 
+```shell
+Enrolling keys to EFI variables...✓
 Enrolled keys to the EFI variables!
 ```
 
 Verify that the platform is now out of Setup Mode:
 
-```bash
+```shell
 sbctl status
 ```
 
-It should output something alike:
+It should output something like:
 
-```plain
+```shell
 Installed:    ✓ sbctl is installed
 Owner GUID:   88f1e363-3f8e-4f73-9a86-57a2dcb1a285
 Setup Mode:   ✓ Disabled
@@ -95,27 +87,27 @@ Secure Boot:  ✗ Disabled
 Vendor Keys:  none
 ```
 
-Sign the linux efi application:
+Sign the Linux EFI application:
 
-```bash
+```shell
 sbctl sign /boot/efi/linux
 ```
 
 It should output something alike:
 
-```plain
+```shell
 ✓ Signed /boot/efi/linux
 ```
 
-Analyze the linux efi application:
+Analyze the Linux EFI application:
 
-```bash
+```shell
 efianalyze signed-image /boot/efi/linux
 ```
 
-It should output something alike:
+It should output something like:
 
-```plain
+```shell
 Data Directory Header:
 	Virtual Address: 0xa1e8a0
 	Size in bytes: 2192
@@ -126,20 +118,20 @@ Certificate Type: WIN_CERT_TYPE_PKCS_SIGNED_DATA
 
 Reboot the system:
 
-```bash
+```shell
 umount /boot/efi
 shutdown -r
 ```
 
 After boot, verify that the platform is now in Secure Boot mode:
 
-```bash
+```shell
 sbctl status
 ```
 
 It must output:
 
-```plain
+```shell
 Installed:    ✓ sbctl is installed
 Owner GUID:   88f1e363-3f8e-4f73-9a86-57a2dcb1a285
 Setup Mode:   ✓ Disabled
@@ -149,24 +141,24 @@ Vendor Keys:  none
 
 Test loading a kernel module:
 
-```bash
+```shell
 insmod /modules/configs.ko
 ```
 
 It must not return any output nor error.
 
-And that's pretty much how you test drive Secure Boot in OVMF.
+And that's much how you test drive Secure Boot in OVMF.
 
 ## QEMU VM device tree
 
-You can see all the qemu devices status by running the following command in another shell:
+You can see all the QEMU devices status by running the following command in another shell:
 
-```bash
+```shell
 cd tmp
 echo info qtree | ./qmp-shell -H ./test/amd64.socket
 ```
 
-## Reference
+## References
 
 * [Unified Extensible Firmware Interface (UEFI)](https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface).
 * [UEFI Forum](http://www.uefi.org/).

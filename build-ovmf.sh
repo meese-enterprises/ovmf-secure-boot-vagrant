@@ -5,12 +5,7 @@ set -euxo pipefail
 
 cd $WORKSPACE
 
-# build.
-# TODO TPM_ENABLE=TRUE
-# TODO TPM_CONFIG_ENABLE=TRUE
-# TODO NETWORK_TLS_ENABLE=TRUE
-# TODO increase the logging level with --pcd gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x8000004F and use # DEBUG_VARIABLE  0x00000100  // Variable ?
-# see https://github.com/tianocore/edk2/blob/master/OvmfPkg/README
+# Build
 NUM_CPUS=$((`getconf _NPROCESSORS_ONLN` + 2))
 build \
     -p OvmfPkg/OvmfPkgX64.dsc \
@@ -20,10 +15,14 @@ build \
     -n $NUM_CPUS \
     -D SECURE_BOOT_ENABLE=TRUE \
     -D SMM_REQUIRE=TRUE \
+    -D TPM_ENABLE=TRUE \
+    -D TPM_CONFIG_ENABLE=TRUE \
+    -D NETWORK_TLS_ENABLE=TRUE \
     --pcd gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVendor=L"rgl" \
-    --pcd gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString=L"rgl uefi firmware"
+    --pcd gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString=L"rgl uefi firmware" \
+    --pcd gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel=0x8000004F
 
-# copy to the host.
+# Copy to the host.
 # NB we also copy the Shell.efi file because its easier to use it
 #    as a boot option. e.g. to add it as the last boot option to
 #    reboot the system when all the other options have failed.

@@ -1,28 +1,26 @@
 #!/bin/bash
 source /vagrant/lib.sh
 
-# go home.
+echo "Installing dependencies..."
 cd ~
+sudo apt-get -qq install bc bison flex libssl-dev make \
+    libc6-dev libncurses5-dev libelf-dev >/dev/null
 
-# install dependencies.
-sudo apt-get install -y bc bison flex libssl-dev make libc6-dev libncurses5-dev libelf-dev
-
-# get the linux kernel source code.
+# Get the Linux kernel source code
 if [ ! -d linux ]; then
-    linux_url='https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.15.135.tar.xz'
-    linux_path="$(basename $linux_url)"
-    wget -qO $linux_path $linux_url
-    mkdir linux
-    tar xf $linux_path -C linux --strip-components 1
+  linux_url="https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.15.135.tar.xz"
+  linux_path="$(basename $linux_url)"
+  wget -qO $linux_path $linux_url
+  mkdir linux
+  tar xf $linux_path -C linux --strip-components 1
 fi
 
-# build.
-# see make help
+# Build (see `make help`)
 cd linux
 make x86_64_defconfig
 make kvm_guest.config # see kernel/configs/kvm_guest.config
 # TODO evaluate EFI_BOOTLOADER_CONTROL
-cat >rgl.config <<'EOF'
+cat >rgl.config <<"EOF"
 CONFIG_LOCALVERSION="-rgl"
 # CONFIG_MODULES is not set
 # CONFIG_IA32_EMULATION is not set
@@ -36,14 +34,16 @@ CONFIG_LOCK_DOWN_KERNEL_FORCE_CONFIDENTIALITY=y
 CONFIG_HW_RANDOM_VIRTIO=y
 CONFIG_FW_CFG_SYSFS=y
 EOF
+
 ./scripts/kconfig/merge_config.sh -n .config rgl.config
-cat >rgl-modules.config <<'EOF'
+cat >rgl-modules.config <<"EOF"
 CONFIG_MODULES=y
 CONFIG_MODULE_SIG_ALL=y
 CONFIG_MODULE_SIG_SHA256=y
 CONFIG_IKCONFIG=m
 CONFIG_IKCONFIG_PROC=y
 EOF
+
 ./scripts/kconfig/merge_config.sh -n .config rgl-modules.config
 time make -j $(nproc) bzImage # see arch/x86/Makefile
 time make -j $(nproc) modules
@@ -58,6 +58,6 @@ time make INSTALL_MOD_PATH=/vagrant/tmp/linux-modules modules_install
 #qemu-system-x86_64 -kernel arch/x86/boot/bzImage -nographic -append console=ttyS0
 #qemu-system-x86_64 -kernel arch/x86/boot/bzImage -append vga=786
 
-# copy to host.
+# Copy to host
 install arch/x86/boot/bzImage /vagrant/tmp/linux
 install .config /vagrant/tmp/linux.config
